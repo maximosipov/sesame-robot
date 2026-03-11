@@ -24,6 +24,21 @@ win_width  = 20;         // [0:1:50] Window width along Y
 win_length = 14;         // [0:1:50] Window length along X
 win_side_offset = 1;     // [0:0.5:10] Offset from inner right wall
 
+/* [Right Wall Cut] */
+cut_width   = 12;        // [0:1:50] Cut width along Y
+cut_height  = 6;         // [0:1:50] Cut height along Z
+cut_chamfer = 1;         // [0:0.5:3] Chamfer on cut corners
+
+/* [Front/Rear Wall Cuts] */
+fr_cut_width  = 16;      // [0:1:50] Cut width along X
+fr_cut_height = 10;      // [0:1:50] Cut height along Z
+fr_cut_chamfer = 1;      // [0:0.5:3] Chamfer on cut corners
+
+/* [Left Wall Extension] */
+ext_width    = 44;        // [0:1:100] Total width along Y
+ext_height   = 8;         // [0:1:50] Height along Z
+ext_top_offset = 4;       // [0:1:20] Offset from top of left wall
+
 /* [Hidden] */
 epsilon = 0.01;
 oc = outer_chamfer;
@@ -78,10 +93,50 @@ module top_window() {
         cube([win_length, win_width, wall + 2]);
 }
 
+module right_wall_cut() {
+    cut_y = (body_depth - cut_width) / 2;
+    translate([body_width - wall - 1, cut_y, -1])
+        linear_extrude(cut_height + 1)
+        chamfered_rect(wall + 2, cut_width, cut_chamfer);
+}
+
+module front_rear_cuts() {
+    cut_x = (body_width - fr_cut_width) / 2;
+    // Front wall (Y=0)
+    translate([cut_x, -1, -1])
+        linear_extrude(fr_cut_height + 1)
+        chamfered_rect(fr_cut_width, wall + 2, fr_cut_chamfer);
+    // Rear wall (Y=body_depth)
+    translate([cut_x, body_depth - wall - 1, -1])
+        linear_extrude(fr_cut_height + 1)
+        chamfered_rect(fr_cut_width, wall + 2, fr_cut_chamfer);
+}
+
+module left_wall_extension() {
+    ext_r = ext_height / 2;
+    ext_z = body_height - ext_top_offset - ext_r;
+    ext_y_front = (body_depth - ext_width) / 2 + ext_r;
+    ext_y_rear  = (body_depth + ext_width) / 2 - ext_r;
+    // Stadium shape in Y-Z plane, extruded along X (wall thickness)
+    hull() {
+        translate([0, ext_y_front, ext_z])
+            rotate([0, 90, 0])
+            cylinder(h=wall, r=ext_r);
+        translate([0, ext_y_rear, ext_z])
+            rotate([0, 90, 0])
+            cylinder(h=wall, r=ext_r);
+    }
+}
+
 module assembly() {
     difference() {
-        block();
+        union() {
+            block();
+            left_wall_extension();
+        }
         top_window();
+        right_wall_cut();
+        front_rear_cuts();
     }
 }
 
