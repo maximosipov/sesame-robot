@@ -34,6 +34,24 @@ fr_cut_width  = 16;      // [0:1:50] Cut width along X
 fr_cut_height = 10;      // [0:1:50] Cut height along Z
 fr_cut_chamfer = 1;      // [0:0.5:3] Chamfer on cut corners
 
+/* [Mounting Posts] */
+mount_post_size  = 4;     // [2:1:10] Post width/depth
+mount_post_thick = 2;     // [1:0.5:10] Post thickness (hangs from ceiling)
+mount_hole_dia   = 1;     // [0.5:0.1:5] Mounting hole diameter
+mount_hole_depth = 2;     // [1:0.5:10] Mounting hole depth
+mount_dx = 46;            // [10:1:100] Distance between holes along X
+mount_dy = 22;            // [10:1:50] Distance between holes along Y
+mount_left_offset = 4;    // [0:1:50] Offset from inner left wall
+
+/* [Bottom Posts] */
+bpost_size    = 4;        // [2:1:10] Post width/depth
+bpost_height  = 4;        // [1:0.5:20] Post height
+bpost_chamfer = 1;        // [0:0.5:3] Chamfer on post corners
+bpost_hole_dia = 1;       // [0.5:0.1:5] Hole diameter
+bpost_hole_depth = 2;     // [1:0.5:10] Hole depth
+bpost_dx = 64;            // [10:1:100] Distance between holes along X
+bpost_dy = 32;            // [10:1:50] Distance between holes along Y
+
 /* [Left Wall Extension] */
 ext_width    = 44;        // [0:1:100] Total width along Y
 ext_height   = 8;         // [0:1:50] Height along Z
@@ -128,15 +146,60 @@ module left_wall_extension() {
     }
 }
 
+module mounting_posts() {
+    cx_left = wall + mount_left_offset + mount_post_size/2;
+    cy = body_depth / 2;
+    ceil_z = body_height - wall;
+    ps = mount_post_size;
+    for (dx = [cx_left, cx_left + mount_dx])
+        for (dy = [-mount_dy/2, mount_dy/2])
+            translate([dx - ps/2, cy + dy - ps/2, ceil_z - mount_post_thick])
+                cube([ps, ps, mount_post_thick]);
+}
+
+module mounting_holes() {
+    cx_left = wall + mount_left_offset + mount_post_size/2;
+    cy = body_depth / 2;
+    ceil_z = body_height - wall;
+    for (dx = [cx_left, cx_left + mount_dx])
+        for (dy = [-mount_dy/2, mount_dy/2])
+            translate([dx, cy + dy, ceil_z - mount_hole_depth - epsilon])
+                cylinder(d=mount_hole_dia, h=mount_hole_depth + epsilon);
+}
+
+module bottom_posts() {
+    cx = body_width / 2;
+    cy = body_depth / 2;
+    ps = bpost_size;
+    for (dx = [-bpost_dx/2, bpost_dx/2])
+        for (dy = [-bpost_dy/2, bpost_dy/2])
+            translate([cx + dx - ps/2, cy + dy - ps/2, 0])
+                linear_extrude(bpost_height)
+                chamfered_rect(ps, ps, bpost_chamfer);
+}
+
+module bottom_holes() {
+    cx = body_width / 2;
+    cy = body_depth / 2;
+    for (dx = [-bpost_dx/2, bpost_dx/2])
+        for (dy = [-bpost_dy/2, bpost_dy/2])
+            translate([cx + dx, cy + dy, -1])
+                cylinder(d=bpost_hole_dia, h=bpost_hole_depth + 1);
+}
+
 module assembly() {
     difference() {
         union() {
             block();
             left_wall_extension();
+            mounting_posts();
+            bottom_posts();
         }
         top_window();
         right_wall_cut();
         front_rear_cuts();
+        mounting_holes();
+        bottom_holes();
     }
 }
 
