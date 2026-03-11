@@ -27,17 +27,14 @@ win_top_offset = 12;     // [0:1:50] Offset from top of right wall
 /* [Left Wall Cut] */
 lcut_width  = 8;          // [0:1:50] Cut width along Y
 lcut_height = 4;          // [0:1:50] Cut height along Z
-lcut_chamfer = 1;         // [0:0.5:3] Chamfer on cut corners
 
 /* [Right Wall Cut] */
 cut_width   = 12;        // [0:1:50] Cut width along Y
 cut_height  = 6;         // [0:1:50] Cut height along Z
-cut_chamfer = 1;         // [0:0.5:3] Chamfer on cut corners
 
 /* [Front/Rear Wall Cuts] */
 fr_cut_width  = 16;      // [0:1:50] Cut width along X
 fr_cut_height = 10;      // [0:1:50] Cut height along Z
-fr_cut_chamfer = 1;      // [0:0.5:3] Chamfer on cut corners
 
 /* [Mounting Posts] */
 mount_post_size  = 4;     // [2:1:10] Post width/depth
@@ -56,10 +53,10 @@ bpost_hole_depth = 2;     // [1:0.5:10] Hole depth
 bpost_dx = 64;            // [10:1:100] Distance between holes along X
 bpost_dy = 32;            // [10:1:50] Distance between holes along Y
 
-/* [Left Wall Extension] */
-ext_width    = 44;        // [0:1:100] Total width along Y
-ext_height   = 8;         // [0:1:50] Height along Z
-ext_top_offset = 4;       // [0:1:20] Offset from top of left wall
+/* [Left Pyramid Extension] */
+ext_width    = 34;        // [0:1:100] Total width along Y (body_depth - 2*outer_chamfer)
+ext_height   = 8;         // [0:1:50] Rounded block height along Z
+pyr_depth    = 6;         // [1:1:30] Pyramid depth (protrusion in -X)
 
 /* [Hidden] */
 epsilon = 0.01;
@@ -131,84 +128,70 @@ module right_wall_window() {
 
 module left_wall_cut() {
     y0 = (body_depth - lcut_width) / 2;
-    // Outer bevel
-    hull() {
-        translate([-epsilon, y0 - cc, -1])
-            cube([epsilon, lcut_width + 2*cc, lcut_height + cc + 1]);
-        translate([cc, y0, -1])
-            cube([epsilon, lcut_width, lcut_height + 1]);
-    }
-    // Inner bevel
-    hull() {
-        translate([wall - cc, y0, -1])
-            cube([epsilon, lcut_width, lcut_height + 1]);
-        translate([wall, y0 - cc, -1])
-            cube([epsilon, lcut_width + 2*cc, lcut_height + cc + 1]);
-    }
+    translate([-epsilon, y0, -1])
+        cube([wall + 2*epsilon, lcut_width, lcut_height + 1]);
 }
 
 module right_wall_cut() {
     y0 = (body_depth - cut_width) / 2;
     rx = body_width - wall;
-    // Inner bevel
-    hull() {
-        translate([rx, y0 - cc, -1])
-            cube([epsilon, cut_width + 2*cc, cut_height + cc + 1]);
-        translate([rx + cc, y0, -1])
-            cube([epsilon, cut_width, cut_height + 1]);
-    }
-    // Outer bevel
-    hull() {
-        translate([rx + wall - cc, y0, -1])
-            cube([epsilon, cut_width, cut_height + 1]);
-        translate([rx + wall, y0 - cc, -1])
-            cube([epsilon, cut_width + 2*cc, cut_height + cc + 1]);
-    }
+    translate([rx - epsilon, y0, -1])
+        cube([wall + 2*epsilon, cut_width, cut_height + 1]);
 }
 
 module front_rear_cuts() {
     x0 = (body_width - fr_cut_width) / 2;
-    // Front wall (Y=0)
+    // Front wall
+    translate([x0, -epsilon, -1])
+        cube([fr_cut_width, wall + 2*epsilon, fr_cut_height + 1]);
+    // Rear wall
+    translate([x0, body_depth - wall - epsilon, -1])
+        cube([fr_cut_width, wall + 2*epsilon, fr_cut_height + 1]);
+}
+
+module left_pyramid_extension() {
+    cz = body_height - oc - (ext_height + 2*pyr_depth)/2;  // Top slope continues top chamfer
+    y0 = (body_depth - ext_width) / 2;
+    // 45-degree top and bottom walls: height grows by 2*depth at the base
+    h_tip  = ext_height;
+    h_base = ext_height + 2 * pyr_depth;
+
+    // Outer pyramid shell
     hull() {
-        translate([x0 - cc, -epsilon, -1])
-            cube([fr_cut_width + 2*cc, epsilon, fr_cut_height + cc + 1]);
-        translate([x0, cc, -1])
-            cube([fr_cut_width, epsilon, fr_cut_height + 1]);
+        // Tip face (x = -pyr_depth)
+        translate([-pyr_depth, y0, cz - h_tip/2])
+            cube([epsilon, ext_width, h_tip]);
+        // Base face at left wall (x = 0)
+        translate([0, y0, cz - h_base/2])
+            cube([epsilon, ext_width, h_base]);
     }
+
+    // Rounded block at center of pyramid tip
+    ext_r = ext_height / 2;
+    ext_y_front = (body_depth - ext_width) / 2 + ext_r;
+    ext_y_rear  = (body_depth + ext_width) / 2 - ext_r;
     hull() {
-        translate([x0, wall - cc, -1])
-            cube([fr_cut_width, epsilon, fr_cut_height + 1]);
-        translate([x0 - cc, wall, -1])
-            cube([fr_cut_width + 2*cc, epsilon, fr_cut_height + cc + 1]);
-    }
-    // Rear wall (Y=body_depth)
-    hull() {
-        translate([x0 - cc, body_depth - wall - epsilon, -1])
-            cube([fr_cut_width + 2*cc, epsilon, fr_cut_height + cc + 1]);
-        translate([x0, body_depth - wall + cc, -1])
-            cube([fr_cut_width, epsilon, fr_cut_height + 1]);
-    }
-    hull() {
-        translate([x0, body_depth - cc, -1])
-            cube([fr_cut_width, epsilon, fr_cut_height + 1]);
-        translate([x0 - cc, body_depth, -1])
-            cube([fr_cut_width + 2*cc, epsilon, fr_cut_height + cc + 1]);
+        translate([-pyr_depth, ext_y_front, cz])
+            rotate([0, 90, 0])
+            cylinder(h=wall, r=ext_r);
+        translate([-pyr_depth, ext_y_rear, cz])
+            rotate([0, 90, 0])
+            cylinder(h=wall, r=ext_r);
     }
 }
 
-module left_wall_extension() {
-    ext_r = ext_height / 2;
-    ext_z = body_height - ext_top_offset - ext_r;
-    ext_y_front = (body_depth - ext_width) / 2 + ext_r;
-    ext_y_rear  = (body_depth + ext_width) / 2 - ext_r;
-    // Stadium shape in Y-Z plane, extruded along X (wall thickness)
+module left_pyramid_cavity() {
+    cz = body_height - oc - (ext_height + 2*pyr_depth)/2;
+    y0 = (body_depth - ext_width) / 2;
+    h_tip  = ext_height - 2*wall;
+    h_base = ext_height + 2*pyr_depth - 2*wall;
+
+    // Inner cavity — extends into main box so it connects
     hull() {
-        translate([0, ext_y_front, ext_z])
-            rotate([0, 90, 0])
-            cylinder(h=wall, r=ext_r);
-        translate([0, ext_y_rear, ext_z])
-            rotate([0, 90, 0])
-            cylinder(h=wall, r=ext_r);
+        translate([-pyr_depth + wall, y0 + wall, cz - h_tip/2])
+            cube([epsilon, ext_width - 2*wall, h_tip]);
+        translate([wall, y0 + wall, cz - h_base/2])
+            cube([epsilon, ext_width - 2*wall, h_base]);
     }
 }
 
@@ -278,10 +261,11 @@ module assembly() {
     difference() {
         union() {
             block();
-            left_wall_extension();
+            left_pyramid_extension();
             mounting_posts();
             bottom_posts();
         }
+        left_pyramid_cavity();
         right_wall_window();
         left_wall_cut();
         right_wall_cut();
