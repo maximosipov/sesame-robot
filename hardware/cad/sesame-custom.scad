@@ -39,16 +39,16 @@ fr_cut_height = 10;      // [0:1:50] Cut height along Z
 /* [Mounting Posts] */
 mount_post_size  = 4;     // [2:1:10] Post width/depth
 mount_post_thick = 2;     // [1:0.5:10] Post thickness (hangs from ceiling)
-mount_hole_dia   = 1;     // [0.5:0.1:5] Mounting hole diameter
+mount_hole_dia   = 2;     // [0.5:0.1:5] Mounting hole diameter
 mount_hole_depth = 2;     // [1:0.5:10] Mounting hole depth
-mount_dx = 46;            // [10:1:100] Distance between holes along X
+mount_dx = 47;            // [10:1:100] Distance between holes along X
 mount_dy = 22;            // [10:1:50] Distance between holes along Y
 
 /* [Bottom Posts] */
 bpost_size    = 4;        // [2:1:10] Post width/depth
 bpost_height  = 4;        // [1:0.5:20] Post height
 bpost_chamfer = 1;        // [0:0.5:3] Chamfer on post corners
-bpost_hole_dia = 1;       // [0.5:0.1:5] Hole diameter
+bpost_hole_dia = 2;       // [0.5:0.1:5] Hole diameter
 bpost_hole_depth = 2;     // [1:0.5:10] Hole depth
 bpost_dx = 64;            // [10:1:100] Distance between holes along X
 bpost_dy = 32;            // [10:1:50] Distance between holes along Y
@@ -56,7 +56,7 @@ bpost_dy = 32;            // [10:1:50] Distance between holes along Y
 /* [Left Pyramid Extension] */
 ext_width    = 34;        // [0:1:100] Total width along Y (body_depth - 2*outer_chamfer)
 ext_height   = 8;         // [0:1:50] Rounded block height along Z
-pyr_depth    = 6;         // [1:1:30] Pyramid depth (protrusion in -X)
+pyr_depth    = 9.5;       // [1:0.1:30] Pyramid depth (protrusion in -X, base 75% of body_height)
 
 /* [Hidden] */
 epsilon = 0.01;
