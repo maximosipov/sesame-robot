@@ -59,6 +59,13 @@ ext_width    = 34;        // [0:1:100] Total width along Y (body_depth - 2*outer
 ext_height   = 13;        // [0:1:50] Rounded block height along Z
 pyr_depth    = 7;         // [1:0.1:30] Pyramid depth (protrusion in -X, base 75% of body_height)
 
+/* [Pyramid Mounting Tabs] */
+pmt_total_width = 44;     // [0:1:100] Total width including tabs along Y
+pmt_hole_spacing = 37;    // [10:1:80] Distance between mounting holes along Y
+pmt_tab_height  = 8;      // [1:0.5:20] Tab height along Z
+pmt_hole_dia    = 2;      // [0.5:0.1:5] Mounting hole diameter
+pmt_tab_radius  = 4;      // [0:0.5:10] Corner radius on tabs
+
 /* [Hidden] */
 epsilon = 0.01;
 cc = 1;                   // Edge chamfer for cuts and posts
@@ -255,15 +262,61 @@ module bottom_holes() {
                 cylinder(d=bpost_hole_dia, h=bpost_hole_depth + 1);
 }
 
+module pyramid_mounting_tabs() {
+    cz = body_height - oc - (ext_height + 2*pyr_depth)/2;
+    tab_w = (pmt_total_width - ext_width) / 2;  // width of each tab
+    y_front_inner = (body_depth - ext_width) / 2;
+    y_rear_inner  = (body_depth + ext_width) / 2;
+    tab_z = cz - pmt_tab_height / 2;
+    r = pmt_tab_radius;
+    // Front tab (extends in -Y)
+    hull() {
+        // Inner edge (straight, at pyramid face)
+        translate([-pyr_depth, y_front_inner - epsilon, tab_z])
+            cube([wall, epsilon, pmt_tab_height]);
+        // Outer rounded corners
+        translate([-pyr_depth, y_front_inner - tab_w + r, tab_z + r])
+            rotate([0, 90, 0])
+            cylinder(r=r, h=wall);
+        translate([-pyr_depth, y_front_inner - tab_w + r, tab_z + pmt_tab_height - r])
+            rotate([0, 90, 0])
+            cylinder(r=r, h=wall);
+    }
+    // Rear tab (extends in +Y)
+    hull() {
+        // Inner edge (straight, at pyramid face)
+        translate([-pyr_depth, y_rear_inner, tab_z])
+            cube([wall, epsilon, pmt_tab_height]);
+        // Outer rounded corners
+        translate([-pyr_depth, y_rear_inner + tab_w - r, tab_z + r])
+            rotate([0, 90, 0])
+            cylinder(r=r, h=wall);
+        translate([-pyr_depth, y_rear_inner + tab_w - r, tab_z + pmt_tab_height - r])
+            rotate([0, 90, 0])
+            cylinder(r=r, h=wall);
+    }
+}
+
+module pyramid_mounting_holes() {
+    cz = body_height - oc - (ext_height + 2*pyr_depth)/2;
+    cy = body_depth / 2;
+    for (dy = [-pmt_hole_spacing/2, pmt_hole_spacing/2])
+        translate([-pyr_depth - epsilon, cy + dy, cz])
+            rotate([0, 90, 0])
+            cylinder(d=pmt_hole_dia, h=wall + 2*epsilon);
+}
+
 module assembly() {
     difference() {
         union() {
             block();
             left_pyramid_extension();
+            pyramid_mounting_tabs();
             mounting_posts();
             bottom_posts();
         }
         left_pyramid_cavity();
+        pyramid_mounting_holes();
         right_wall_window();
         left_wall_cut();
         right_wall_cut();
