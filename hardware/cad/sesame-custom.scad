@@ -312,6 +312,61 @@ module pyramid_mounting_tabs() {
     }
 }
 
+module pyramid_tab_gussets() {
+    cz = body_height - oc - (ext_height + 2*pyr_depth)/2;
+    tab_w = (pmt_total_width - ext_width) / 2;
+    r = pmt_tab_radius;
+    y_front_inner = (body_depth - ext_width) / 2;
+    y_rear_inner  = (body_depth + ext_width) / 2;
+    cyl_y_front = y_front_inner - tab_w + r;
+    cyl_y_rear  = y_rear_inner + tab_w - r;
+
+    // Front tab — top gusset
+    hull() {
+        translate([-pyr_depth, y_front_inner, cz + ext_height/2 - epsilon])
+            cube([wall, r, epsilon]);
+        intersection() {
+            translate([-pyr_depth, cyl_y_front, cz])
+                rotate([0, 90, 0]) cylinder(r=r, h=wall);
+            translate([-pyr_depth - epsilon, cyl_y_front - r - epsilon, cz])
+                cube([wall + 2*epsilon, r + 2*epsilon, r + epsilon]);
+        }
+    }
+    // Front tab — bottom gusset
+    hull() {
+        translate([-pyr_depth, y_front_inner, cz - ext_height/2])
+            cube([wall, r, epsilon]);
+        intersection() {
+            translate([-pyr_depth, cyl_y_front, cz])
+                rotate([0, 90, 0]) cylinder(r=r, h=wall);
+            translate([-pyr_depth - epsilon, cyl_y_front - r - epsilon, cz - r - epsilon])
+                cube([wall + 2*epsilon, r + 2*epsilon, r + epsilon]);
+        }
+    }
+    // Rear tab — top gusset
+    hull() {
+        translate([-pyr_depth, y_rear_inner - r, cz + ext_height/2 - epsilon])
+            cube([wall, r, epsilon]);
+        intersection() {
+            translate([-pyr_depth, cyl_y_rear, cz])
+                rotate([0, 90, 0]) cylinder(r=r, h=wall);
+            translate([-pyr_depth - epsilon, cyl_y_rear - epsilon, cz])
+                cube([wall + 2*epsilon, r + 2*epsilon, r + epsilon]);
+        }
+    }
+    // Rear tab — bottom gusset
+    hull() {
+        translate([-pyr_depth, y_rear_inner - r, cz - ext_height/2])
+            cube([wall, r, epsilon]);
+        intersection() {
+            translate([-pyr_depth, cyl_y_rear, cz])
+                rotate([0, 90, 0]) cylinder(r=r, h=wall);
+            translate([-pyr_depth - epsilon, cyl_y_rear - epsilon, cz - r - epsilon])
+                cube([wall + 2*epsilon, r + 2*epsilon, r + epsilon]);
+        }
+    }
+}
+
 module pyramid_mounting_holes() {
     cz = body_height - oc - (ext_height + 2*pyr_depth)/2;
     cy = body_depth / 2;
@@ -327,6 +382,7 @@ module assembly() {
             block();
             left_pyramid_extension();
             pyramid_mounting_tabs();
+            pyramid_tab_gussets();
             mounting_posts();
             bottom_posts();
         }
