@@ -50,13 +50,14 @@ bpost_height  = 4;        // [1:0.5:20] Post height
 bpost_chamfer = 1;        // [0:0.5:3] Chamfer on post corners
 bpost_hole_dia = 2;       // [0.5:0.1:5] Hole diameter
 bpost_hole_depth = 2;     // [1:0.5:10] Hole depth
-bpost_dx = 64;            // [10:1:100] Distance between holes along X
+bpost_dx = 63;            // [10:1:100] Distance between holes along X
 bpost_dy = 32;            // [10:1:50] Distance between holes along Y
+bpost_left = 6;           // [1:0.5:20] Distance from left wall to hole center
 
 /* [Left Pyramid Extension] */
 ext_width    = 34;        // [0:1:100] Total width along Y (body_depth - 2*outer_chamfer)
-ext_height   = 8;         // [0:1:50] Rounded block height along Z
-pyr_depth    = 9.5;       // [1:0.1:30] Pyramid depth (protrusion in -X, base 75% of body_height)
+ext_height   = 13;        // [0:1:50] Rounded block height along Z
+pyr_depth    = 7;         // [1:0.1:30] Pyramid depth (protrusion in -X, base 75% of body_height)
 
 /* [Hidden] */
 epsilon = 0.01;
@@ -91,17 +92,14 @@ module block() {
                 linear_extrude(epsilon)
                 chamfered_rect(body_width - 2*oc, body_depth - 2*oc, oc);
         }
-        // Inner cavity: chamfered vertical + top edges, open bottom
+        // Inner cavity: chamfered vertical edges, open bottom
         hull() {
             translate([wall, wall, -1])
                 linear_extrude(epsilon)
                 chamfered_rect(iw, id, ic);
-            translate([wall, wall, body_height - wall - ic])
+            translate([wall, wall, body_height - wall])
                 linear_extrude(epsilon)
                 chamfered_rect(iw, id, ic);
-            translate([wall - ic, wall - ic, body_height - wall])
-                linear_extrude(epsilon)
-                chamfered_rect(iw + 2*ic, id + 2*ic, ic);
         }
     }
 }
@@ -227,7 +225,7 @@ module mounting_holes() {
 }
 
 module bottom_posts() {
-    cx = body_width / 2;
+    cx = bpost_left + bpost_dx / 2;
     cy = body_depth / 2;
     ps = bpost_size;
     for (dx = [-bpost_dx/2, bpost_dx/2])
@@ -249,7 +247,7 @@ module bottom_posts() {
 }
 
 module bottom_holes() {
-    cx = body_width / 2;
+    cx = bpost_left + bpost_dx / 2;
     cy = body_depth / 2;
     for (dx = [-bpost_dx/2, bpost_dx/2])
         for (dy = [-bpost_dy/2, bpost_dy/2])
