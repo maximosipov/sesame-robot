@@ -37,8 +37,9 @@ fr_cut_width  = 16;      // [0:1:50] Cut width along X
 fr_cut_height = 10;      // [0:1:50] Cut height along Z
 
 /* [Mounting Posts] */
-mount_post_size  = 4;     // [2:1:10] Post width/depth
+mount_post_size  = 8;     // [2:1:10] Post width/depth
 mount_post_thick = 2;     // [1:0.5:10] Post thickness (hangs from ceiling)
+mount_post_chamfer = 2;   // [0.5:0.5:5] Chamfer on bottom edges of posts
 mount_hole_dia   = 2;     // [0.5:0.1:5] Mounting hole diameter
 mount_hole_depth = 2;     // [1:0.5:10] Mounting hole depth
 mount_dx = 47;            // [10:1:100] Distance between holes along X
@@ -46,7 +47,7 @@ mount_dy = 22;            // [10:1:50] Distance between holes along Y
 
 /* [Bottom Posts] */
 bpost_size    = 4;        // [2:1:10] Post width/depth
-bpost_height  = 4;        // [1:0.5:20] Post height
+bpost_height  = 8;        // [1:0.5:20] Post height
 bpost_chamfer = 1;        // [0:0.5:3] Chamfer on post corners
 bpost_hole_dia = 2;       // [0.5:0.1:5] Hole diameter
 bpost_hole_depth = 2;     // [1:0.5:10] Hole depth
@@ -209,11 +210,11 @@ module mounting_posts() {
         for (dy = [-mount_dy/2, mount_dy/2])
             translate([cx + dx - ps/2, cy + dy - ps/2, 0])
             hull() {
-                // Bottom face: inset by cc
-                translate([cc, cc, ceil_z - mount_post_thick])
-                    cube([ps - 2*cc, ps - 2*cc, epsilon]);
-                // cc above bottom: full size
-                translate([0, 0, ceil_z - mount_post_thick + cc])
+                // Bottom face: inset by mount_post_chamfer
+                translate([mount_post_chamfer, mount_post_chamfer, ceil_z - mount_post_thick])
+                    cube([ps - 2*mount_post_chamfer, ps - 2*mount_post_chamfer, epsilon]);
+                // Above bottom: full size
+                translate([0, 0, ceil_z - mount_post_thick + mount_post_chamfer])
                     cube([ps, ps, epsilon]);
                 // Top (attached to ceiling)
                 translate([0, 0, ceil_z - epsilon])
@@ -232,25 +233,39 @@ module mounting_holes() {
 }
 
 module bottom_posts() {
-    cx = bpost_left + bpost_dx / 2;
     cy = body_depth / 2;
     ps = bpost_size;
-    for (dx = [-bpost_dx/2, bpost_dx/2])
-        for (dy = [-bpost_dy/2, bpost_dy/2])
-            translate([cx + dx - ps/2, cy + dy - ps/2, 0])
-            hull() {
-                // Bottom: full size with corner chamfers
-                linear_extrude(epsilon)
-                    chamfered_rect(ps, ps, bpost_chamfer);
-                // Below top: full size
-                translate([0, 0, bpost_height - cc])
-                    linear_extrude(epsilon)
-                    chamfered_rect(ps, ps, bpost_chamfer);
-                // Top face: inset by cc
-                translate([cc, cc, bpost_height])
-                    linear_extrude(epsilon)
-                    chamfered_rect(ps - 2*cc, ps - 2*cc, max(bpost_chamfer - cc, 0));
-            }
+    inset = ps / 2;  // 45-degree Y inset at top
+    // Left posts: extend from left wall (x=0) to hole center + ps/2
+    for (dy = [-bpost_dy/2, bpost_dy/2]) {
+        lx0 = 0;
+        lx1 = bpost_left + ps/2;
+        lw  = lx1 - lx0;
+        translate([lx0, cy + dy, 0])
+        hull() {
+            translate([0, -ps/2, 0])
+                cube([lw, ps, epsilon]);
+            translate([0, -ps/2, bpost_height - inset])
+                cube([lw, ps, epsilon]);
+            translate([0, 0, bpost_height])
+                cube([lw, epsilon, epsilon]);
+        }
+    }
+    // Right posts: extend from hole center - ps/2 to right wall (x=body_width)
+    for (dy = [-bpost_dy/2, bpost_dy/2]) {
+        rx0 = bpost_left + bpost_dx - ps/2;
+        rx1 = body_width;
+        rw  = rx1 - rx0;
+        translate([rx0, cy + dy, 0])
+        hull() {
+            translate([0, -ps/2, 0])
+                cube([rw, ps, epsilon]);
+            translate([0, -ps/2, bpost_height - inset])
+                cube([rw, ps, epsilon]);
+            translate([0, 0, bpost_height])
+                cube([rw, epsilon, epsilon]);
+        }
+    }
 }
 
 module bottom_holes() {
