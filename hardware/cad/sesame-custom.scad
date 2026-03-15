@@ -236,34 +236,41 @@ module bottom_posts() {
     cy = body_depth / 2;
     ps = bpost_size;
     inset = ps / 2;  // 45-degree Y inset at top
-    // Left posts: extend from left wall (x=0) to hole center + ps/2
-    for (dy = [-bpost_dy/2, bpost_dy/2]) {
-        lx0 = 0;
-        lx1 = bpost_left + ps/2;
-        lw  = lx1 - lx0;
-        translate([lx0, cy + dy, 0])
-        hull() {
-            translate([0, -ps/2, 0])
-                cube([lw, ps, epsilon]);
-            translate([0, -ps/2, bpost_height - inset])
-                cube([lw, ps, epsilon]);
-            translate([0, 0, bpost_height])
-                cube([lw, epsilon, epsilon]);
-        }
-    }
-    // Right posts: extend from hole center - ps/2 to right wall (x=body_width)
-    for (dy = [-bpost_dy/2, bpost_dy/2]) {
-        rx0 = bpost_left + bpost_dx - ps/2;
-        rx1 = body_width;
-        rw  = rx1 - rx0;
-        translate([rx0, cy + dy, 0])
-        hull() {
-            translate([0, -ps/2, 0])
-                cube([rw, ps, epsilon]);
-            translate([0, -ps/2, bpost_height - inset])
-                cube([rw, ps, epsilon]);
-            translate([0, 0, bpost_height])
-                cube([rw, epsilon, epsilon]);
+    intersection() {
+        // Clip to outer box outline
+        linear_extrude(bpost_height + epsilon)
+            chamfered_rect(body_width, body_depth, oc);
+        union() {
+            // Left posts: extend from left wall (x=0) to hole center + ps/2
+            for (dy = [-bpost_dy/2, bpost_dy/2]) {
+                lx0 = 0;
+                lx1 = bpost_left + ps/2;
+                lw  = lx1 - lx0;
+                translate([lx0, cy + dy, 0])
+                hull() {
+                    translate([0, -ps/2, 0])
+                        cube([lw, ps, epsilon]);
+                    translate([0, -ps/2, bpost_height - inset])
+                        cube([lw, ps, epsilon]);
+                    translate([0, 0, bpost_height])
+                        cube([lw, epsilon, epsilon]);
+                }
+            }
+            // Right posts: extend from hole center - ps/2 to right wall (x=body_width)
+            for (dy = [-bpost_dy/2, bpost_dy/2]) {
+                rx0 = bpost_left + bpost_dx - ps/2;
+                rx1 = body_width;
+                rw  = rx1 - rx0;
+                translate([rx0, cy + dy, 0])
+                hull() {
+                    translate([0, -ps/2, 0])
+                        cube([rw, ps, epsilon]);
+                    translate([0, -ps/2, bpost_height - inset])
+                        cube([rw, ps, epsilon]);
+                    translate([0, 0, bpost_height])
+                        cube([rw, epsilon, epsilon]);
+                }
+            }
         }
     }
 }
