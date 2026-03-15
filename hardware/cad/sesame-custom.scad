@@ -279,91 +279,47 @@ module bottom_holes() {
 
 module pyramid_mounting_tabs() {
     cz = body_height - oc - (ext_height + 2*pyr_depth)/2;
-    tab_w = (pmt_total_width - ext_width) / 2;  // width of each tab
-    y_front_inner = (body_depth - ext_width) / 2;
-    y_rear_inner  = (body_depth + ext_width) / 2;
-    tab_z = cz - pmt_tab_height / 2;
-    r = pmt_tab_radius;
-    // Front tab (extends in -Y)
-    hull() {
-        // Inner edge (straight, at pyramid face)
-        translate([-pyr_depth, y_front_inner - epsilon, tab_z])
-            cube([wall, epsilon, pmt_tab_height]);
-        // Outer rounded corners
-        translate([-pyr_depth, y_front_inner - tab_w + r, tab_z + r])
-            rotate([0, 90, 0])
-            cylinder(r=r, h=wall);
-        translate([-pyr_depth, y_front_inner - tab_w + r, tab_z + pmt_tab_height - r])
-            rotate([0, 90, 0])
-            cylinder(r=r, h=wall);
-    }
-    // Rear tab (extends in +Y)
-    hull() {
-        // Inner edge (straight, at pyramid face)
-        translate([-pyr_depth, y_rear_inner, tab_z])
-            cube([wall, epsilon, pmt_tab_height]);
-        // Outer rounded corners
-        translate([-pyr_depth, y_rear_inner + tab_w - r, tab_z + r])
-            rotate([0, 90, 0])
-            cylinder(r=r, h=wall);
-        translate([-pyr_depth, y_rear_inner + tab_w - r, tab_z + pmt_tab_height - r])
-            rotate([0, 90, 0])
-            cylinder(r=r, h=wall);
-    }
-}
-
-module pyramid_tab_gussets() {
-    cz = body_height - oc - (ext_height + 2*pyr_depth)/2;
     tab_w = (pmt_total_width - ext_width) / 2;
-    r = pmt_tab_radius;
     y_front_inner = (body_depth - ext_width) / 2;
     y_rear_inner  = (body_depth + ext_width) / 2;
-    cyl_y_front = y_front_inner - tab_w + r;
-    cyl_y_rear  = y_rear_inner + tab_w - r;
-
-    // Front tab — top gusset
+    r = pmt_tab_radius;
+    // Front: smooth hull from rounded tab through pyramid slopes to front wall
     hull() {
-        translate([-pyr_depth, y_front_inner, cz + ext_height/2 - epsilon])
-            cube([wall, r, epsilon]);
-        intersection() {
-            translate([-pyr_depth, cyl_y_front, cz])
-                rotate([0, 90, 0]) cylinder(r=r, h=wall);
-            translate([-pyr_depth - epsilon, cyl_y_front - r - epsilon, cz])
-                cube([wall + 2*epsilon, r + 2*epsilon, r + epsilon]);
-        }
+        // Rounded outer edge at tip
+        translate([-pyr_depth, y_front_inner - tab_w + r, cz])
+            rotate([0, 90, 0])
+            cylinder(r=r, h=wall);
+        // Inner edge along pyramid face at tip (full pyramid height)
+        translate([-pyr_depth, y_front_inner - epsilon, cz - ext_height/2])
+            cube([wall, epsilon, ext_height]);
+        // Top merge point on pyramid slope at 45°
+        translate([-pyr_depth + tab_w, y_front_inner - epsilon, cz + ext_height/2 + tab_w - epsilon])
+            cube([epsilon, epsilon, epsilon]);
+        // Bottom merge point on pyramid slope at 45°
+        translate([-pyr_depth + tab_w, y_front_inner - epsilon, cz - ext_height/2 - tab_w])
+            cube([epsilon, epsilon, epsilon]);
+        // Front wall merge point (at chamfer corner)
+        translate([oc, 0, cz])
+            cube([epsilon, epsilon, epsilon]);
     }
-    // Front tab — bottom gusset
+    // Rear: smooth hull from rounded tab through pyramid slopes to rear wall
     hull() {
-        translate([-pyr_depth, y_front_inner, cz - ext_height/2])
-            cube([wall, r, epsilon]);
-        intersection() {
-            translate([-pyr_depth, cyl_y_front, cz])
-                rotate([0, 90, 0]) cylinder(r=r, h=wall);
-            translate([-pyr_depth - epsilon, cyl_y_front - r - epsilon, cz - r - epsilon])
-                cube([wall + 2*epsilon, r + 2*epsilon, r + epsilon]);
-        }
-    }
-    // Rear tab — top gusset
-    hull() {
-        translate([-pyr_depth, y_rear_inner - r, cz + ext_height/2 - epsilon])
-            cube([wall, r, epsilon]);
-        intersection() {
-            translate([-pyr_depth, cyl_y_rear, cz])
-                rotate([0, 90, 0]) cylinder(r=r, h=wall);
-            translate([-pyr_depth - epsilon, cyl_y_rear - epsilon, cz])
-                cube([wall + 2*epsilon, r + 2*epsilon, r + epsilon]);
-        }
-    }
-    // Rear tab — bottom gusset
-    hull() {
-        translate([-pyr_depth, y_rear_inner - r, cz - ext_height/2])
-            cube([wall, r, epsilon]);
-        intersection() {
-            translate([-pyr_depth, cyl_y_rear, cz])
-                rotate([0, 90, 0]) cylinder(r=r, h=wall);
-            translate([-pyr_depth - epsilon, cyl_y_rear - epsilon, cz - r - epsilon])
-                cube([wall + 2*epsilon, r + 2*epsilon, r + epsilon]);
-        }
+        // Rounded outer edge at tip
+        translate([-pyr_depth, y_rear_inner + tab_w - r, cz])
+            rotate([0, 90, 0])
+            cylinder(r=r, h=wall);
+        // Inner edge along pyramid face at tip (full pyramid height)
+        translate([-pyr_depth, y_rear_inner, cz - ext_height/2])
+            cube([wall, epsilon, ext_height]);
+        // Top merge point on pyramid slope at 45°
+        translate([-pyr_depth + tab_w, y_rear_inner, cz + ext_height/2 + tab_w - epsilon])
+            cube([epsilon, epsilon, epsilon]);
+        // Bottom merge point on pyramid slope at 45°
+        translate([-pyr_depth + tab_w, y_rear_inner, cz - ext_height/2 - tab_w])
+            cube([epsilon, epsilon, epsilon]);
+        // Rear wall merge point (at chamfer corner)
+        translate([oc, body_depth - epsilon, cz])
+            cube([epsilon, epsilon, epsilon]);
     }
 }
 
@@ -382,7 +338,6 @@ module assembly() {
             block();
             left_pyramid_extension();
             pyramid_mounting_tabs();
-            pyramid_tab_gussets();
             mounting_posts();
             bottom_posts();
         }
