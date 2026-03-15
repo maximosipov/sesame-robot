@@ -25,8 +25,8 @@ win_length = 14;         // [0:1:50] Window length along Z
 win_top_offset = 12;     // [0:1:50] Offset from top of right wall
 
 /* [Left Wall Cut] */
-lcut_width  = 8;          // [0:1:50] Cut width along Y
-lcut_height = 4;          // [0:1:50] Cut height along Z
+lcut_width  = 19;         // [0:1:50] Cut width along Y
+lcut_height = 13;         // [0:1:50] Cut height along Z
 
 /* [Right Wall Cut] */
 cut_width   = 12;        // [0:1:50] Cut width along Y
