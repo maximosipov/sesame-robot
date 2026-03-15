@@ -20,8 +20,8 @@ inner_chamfer = 2;       // [0:0.5:5] Chamfer on inner vertical edges
 $fn = $preview ? 32 : 96;
 
 /* [Right Wall Window] */
-win_width  = 20;         // [0:1:50] Window width along Y
-win_length = 14;         // [0:1:50] Window length along Z
+win_width  = 19;         // [0:1:50] Window width along Y
+win_length = 13;         // [0:1:50] Window length along Z
 win_top_offset = 12;     // [0:1:50] Offset from top of right wall
 
 /* [Left Wall Cut] */
@@ -116,20 +116,8 @@ module right_wall_window() {
     wy = (body_depth - win_width) / 2;
     wz = body_height - win_top_offset - win_length;
     wx = body_width - wall;
-    // Outer bevel
-    hull() {
-        translate([wx + wall, wy - cc, wz - cc])
-            cube([epsilon, win_width + 2*cc, win_length + 2*cc]);
-        translate([wx + wall - cc, wy, wz])
-            cube([epsilon, win_width, win_length]);
-    }
-    // Inner bevel
-    hull() {
-        translate([wx + cc, wy, wz])
-            cube([epsilon, win_width, win_length]);
-        translate([wx, wy - cc, wz - cc])
-            cube([epsilon, win_width + 2*cc, win_length + 2*cc]);
-    }
+    translate([wx - epsilon, wy, wz])
+        cube([wall + 2*epsilon, win_width, win_length]);
 }
 
 module left_wall_cut() {
