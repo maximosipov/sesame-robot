@@ -6,6 +6,7 @@
 #include <ESP32Servo.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include "driver/adc.h"
 #include "face-bitmaps.h"
 #include "movement-sequences.h"
 #include "captive-portal.h"
@@ -95,6 +96,9 @@ const int servoPins[8] = {1, 2, 4, 6, 8, 10, 13, 14};
 // Subtrim values for each servo (offset in degrees)
 int8_t servoSubtrim[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
+// ADC Input
+#define ADC_PIN 3
+unsigned long lastAdcReadMs = 0;
 
 // Animation constants
 int frameDelay = 100;
@@ -217,17 +221,16 @@ void handleCommandWeb() {
     recordInput();
     server.send(200, "text/plain", "OK");
   }
-  else if (server.hasArg("servoBtn")) {
+  else if (server.hasArg("servoBtn") && server.hasArg("angle")) {
     String servoName = server.arg("servoBtn");
-    String dir = server.hasArg("dir") ? server.arg("dir") : "";
+    int angle = server.arg("angle").toInt();
     int idx = servoNameToIndex(servoName);
-    if (idx != -1 && (dir == "up" || dir == "down")) {
-      if (dir == "up") runServoToMax(idx);
-      else runServoToMin(idx);
+    if (idx != -1 && angle >= 0 && angle <= 180) {
+      runServoToAngle(idx, angle);
       recordInput();
       server.send(200, "text/plain", "OK");
     } else {
-      server.send(400, "text/plain", "Invalid servo or direction");
+      server.send(400, "text/plain", "Invalid servo or angle");
     }
   }
   else if (server.hasArg("motor") && server.hasArg("value")) {
@@ -485,9 +488,15 @@ void setup() {
   }
   delay(10);
   
+  // ADC Init - GPIO3 = ADC1_CH2 on ESP32-S2, 11dB attenuation for 0-3.3V range
+  adc1_config_width(ADC_WIDTH_BIT_13);
+  adc1_config_channel_atten(ADC1_CHANNEL_2, ADC_ATTEN_DB_11);
+  gpio_pullup_dis((gpio_num_t)ADC_PIN);
+  gpio_pulldown_dis((gpio_num_t)ADC_PIN);
+
   // Show rest face on startup without moving motors
   setFace("rest");
-  
+
   Serial.println(F("HTTP server & Captive Portal started."));
 }
 
@@ -499,6 +508,15 @@ void loop() {
   updateAnimatedFace();
   updateIdleBlink();
   updateWifiInfoScroll();
+
+  // Read ADC every second - SHARP 2Y0A02 distance sensor
+  if (millis() - lastAdcReadMs >= 1000) {
+    lastAdcReadMs = millis();
+    int adcValue = adc1_get_raw(ADC1_CHANNEL_2);
+    float voltage = adcValue * 3.3 / 8191.0;
+    float distCm = (voltage > 0.1) ? (60.0 / voltage) : 0;
+    Serial.print(F("DIST: ")); Serial.print(distCm, 1); Serial.println(F("cm"));
+  }
 
   if (currentCommand != "") {
     String cmd = currentCommand;
@@ -590,6 +608,20 @@ void loop() {
               Serial.println("Invalid motor number (0-7)");
             }
           }
+        }
+        else if (strchr(command_buffer, '-') != NULL) {
+          // Parse servo name commands like L1-45, R3-175
+          char* dashPos = strchr(command_buffer, '-');
+          *dashPos = '\0';
+          String servoName = String(command_buffer);
+          int angle = atoi(dashPos + 1);
+          int idx = servoNameToIndex(servoName);
+          if (idx != -1 && angle >= 0 && angle <= 180) {
+            runServoToAngle(idx, angle);
+          } else {
+            Serial.println("Invalid servo name or angle (0-180)");
+          }
+          *dashPos = '-'; // restore buffer
         }
         else if (strncmp(command_buffer, "all ", 4) == 0) {
              if (sscanf(command_buffer + 4, "%d", &angle) == 1) {

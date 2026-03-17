@@ -323,17 +323,10 @@ inline void runCrabPose() {
 }
 
 // --- SERVO BUTTON CONTROLS ---
-inline void runServoToMin(uint8_t servoIdx) {
-  if (servoIdx < 8) {
-    setServoAngle(servoIdx, 0);
-    Serial.print(F("Servo ")); Serial.print(servoIdx); Serial.println(F(" -> 0"));
-  }
-}
-
-inline void runServoToMax(uint8_t servoIdx) {
-  if (servoIdx < 8) {
-    setServoAngle(servoIdx, 180);
-    Serial.print(F("Servo ")); Serial.print(servoIdx); Serial.println(F(" -> 180"));
+inline void runServoToAngle(uint8_t servoIdx, int angle) {
+  if (servoIdx < 8 && angle >= 0 && angle <= 180) {
+    setServoAngle(servoIdx, angle);
+    Serial.print(ServoNames[servoIdx]); Serial.print(F("-")); Serial.println(angle);
   }
 }
 

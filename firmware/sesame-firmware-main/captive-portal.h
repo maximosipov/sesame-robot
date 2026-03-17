@@ -252,8 +252,29 @@ const char index_html[] PROGMEM = R"rawliteral(
     .servo-col button {
       width: 100%;
       min-height: 44px;
-      font-size: 22px;
+      font-size: 16px;
       padding: 8px;
+    }
+    .servo-angle-input {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .servo-angle-input input[type="number"] {
+      width: 80px;
+      padding: 10px;
+      background: #333;
+      color: #fff;
+      border: 1px solid #555;
+      border-radius: 8px;
+      font-size: 18px;
+      text-align: center;
+    }
+    .servo-angle-input span {
+      font-size: 13px;
+      color: #aaa;
     }
     .servo-side-label {
       font-size: 12px;
@@ -441,50 +462,39 @@ const char index_html[] PROGMEM = R"rawliteral(
       <!-- Servo Controls Section -->
       <div class="section">
         <div class="section-title">Servo Controls</div>
+        <div class="servo-angle-input">
+          <span>-90</span>
+          <input type="number" id="servoAngle" min="-90" max="90" value="0" step="5">
+          <span>+90</span>
+        </div>
         <div class="servo-side-label">Left</div>
         <div class="servo-grid">
           <div class="servo-col">
-            <span class="servo-label">L1</span>
-            <button onclick="servoBtn('L1','up')">&#9650;</button>
-            <button onclick="servoBtn('L1','down')">&#9660;</button>
+            <button onclick="servoBtn('L1')">L1</button>
           </div>
           <div class="servo-col">
-            <span class="servo-label">L2</span>
-            <button onclick="servoBtn('L2','up')">&#9650;</button>
-            <button onclick="servoBtn('L2','down')">&#9660;</button>
+            <button onclick="servoBtn('L2')">L2</button>
           </div>
           <div class="servo-col">
-            <span class="servo-label">L3</span>
-            <button onclick="servoBtn('L3','up')">&#9650;</button>
-            <button onclick="servoBtn('L3','down')">&#9660;</button>
+            <button onclick="servoBtn('L3')">L3</button>
           </div>
           <div class="servo-col">
-            <span class="servo-label">L4</span>
-            <button onclick="servoBtn('L4','up')">&#9650;</button>
-            <button onclick="servoBtn('L4','down')">&#9660;</button>
+            <button onclick="servoBtn('L4')">L4</button>
           </div>
         </div>
         <div class="servo-side-label">Right</div>
         <div class="servo-grid">
           <div class="servo-col">
-            <span class="servo-label">R1</span>
-            <button onclick="servoBtn('R1','up')">&#9650;</button>
-            <button onclick="servoBtn('R1','down')">&#9660;</button>
+            <button onclick="servoBtn('R1')">R1</button>
           </div>
           <div class="servo-col">
-            <span class="servo-label">R2</span>
-            <button onclick="servoBtn('R2','up')">&#9650;</button>
-            <button onclick="servoBtn('R2','down')">&#9660;</button>
+            <button onclick="servoBtn('R2')">R2</button>
           </div>
           <div class="servo-col">
-            <span class="servo-label">R3</span>
-            <button onclick="servoBtn('R3','up')">&#9650;</button>
-            <button onclick="servoBtn('R3','down')">&#9660;</button>
+            <button onclick="servoBtn('R3')">R3</button>
           </div>
           <div class="servo-col">
-            <span class="servo-label">R4</span>
-            <button onclick="servoBtn('R4','up')">&#9650;</button>
-            <button onclick="servoBtn('R4','down')">&#9660;</button>
+            <button onclick="servoBtn('R4')">R4</button>
           </div>
         </div>
       </div>
@@ -707,10 +717,12 @@ function updateMotor(motorNum, value) {
   fetch('/cmd?motor=' + motorNum + '&value=' + value).catch(console.log);
 }
 
-function servoBtn(name, dir) {
+function servoBtn(name) {
   if (!canSendCommand()) return;
+  var uiAngle = parseInt(document.getElementById('servoAngle').value) || 0;
+  var angle = Math.min(180, Math.max(0, uiAngle + 90));
   incrementQueue();
-  fetch('/cmd?servoBtn=' + name + '&dir=' + dir).catch(console.log);
+  fetch('/cmd?servoBtn=' + name + '&angle=' + angle).catch(console.log);
 }
 
 function openSettings() {
