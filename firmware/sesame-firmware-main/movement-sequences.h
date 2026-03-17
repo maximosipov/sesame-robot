@@ -39,6 +39,7 @@ extern int walkCycles;
 extern String currentCommand;
 
 extern void setServoAngle(uint8_t channel, int angle);
+extern void scheduleServoDetach(uint8_t channel);
 extern void setFace(const String& faceName);
 extern void setFaceMode(FaceAnimMode mode);
 extern void setFaceWithMode(const String& faceName, FaceAnimMode mode);
@@ -326,6 +327,7 @@ inline void runCrabPose() {
 inline void runServoToAngle(uint8_t servoIdx, int angle) {
   if (servoIdx < 8 && angle >= 0 && angle <= 180) {
     setServoAngle(servoIdx, angle);
+    scheduleServoDetach(servoIdx);
     Serial.print(ServoNames[servoIdx]); Serial.print(F("-")); Serial.println(angle);
   }
 }

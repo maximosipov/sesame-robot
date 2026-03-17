@@ -96,6 +96,11 @@ const int servoPins[8] = {1, 2, 4, 6, 8, 10, 13, 14};
 // Subtrim values for each servo (offset in degrees)
 int8_t servoSubtrim[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 
+// Servo auto-detach after manual control
+unsigned long servoDetachTime[8] = {0,0,0,0,0,0,0,0};
+bool servoDetachPending[8] = {false,false,false,false,false,false,false,false};
+#define SERVO_DETACH_DELAY 2000
+
 // ADC Input
 #define ADC_PIN 3
 unsigned long lastAdcReadMs = 0;
@@ -197,6 +202,8 @@ void handleGetStatus();
 void handleApiCommand();
 void updateWifiInfoScroll();
 void recordInput();
+void scheduleServoDetach(uint8_t channel);
+void checkServoDetach();
 
 void handleRoot() {
   server.send(200, "text/html", index_html);
@@ -508,6 +515,7 @@ void loop() {
   updateAnimatedFace();
   updateIdleBlink();
   updateWifiInfoScroll();
+  checkServoDetach();
 
   // Read ADC every second - SHARP 2Y0A02 distance sensor
   if (millis() - lastAdcReadMs >= 1000) {
@@ -810,11 +818,31 @@ void updateIdleBlink() {
 }
 
 // ====== HELPERS ======
-void setServoAngle(uint8_t channel, int angle) { 
+void setServoAngle(uint8_t channel, int angle) {
   if (channel < 8) {
-    int adjustedAngle = constrain(angle + servoSubtrim[channel], 0, 180);
+    if (!servos[channel].attached()) {
+      servos[channel].attach(servoPins[channel], 732, 2929);
+    }
+    int adjustedAngle = constrain(angle + servoSubtrim[channel], 10, 170);
     servos[channel].write(adjustedAngle);
     delayWithFace(motorCurrentDelay);
+  }
+}
+
+void scheduleServoDetach(uint8_t channel) {
+  if (channel < 8) {
+    servoDetachTime[channel] = millis() + SERVO_DETACH_DELAY;
+    servoDetachPending[channel] = true;
+  }
+}
+
+void checkServoDetach() {
+  unsigned long now = millis();
+  for (uint8_t i = 0; i < 8; i++) {
+    if (servoDetachPending[i] && now >= servoDetachTime[i]) {
+      servos[i].detach();
+      servoDetachPending[i] = false;
+    }
   }
 }
 
