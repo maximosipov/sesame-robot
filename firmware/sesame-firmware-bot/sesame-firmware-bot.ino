@@ -47,6 +47,10 @@ bool servoDetachPending[8] = {false,false,false,false,false,false,false,false};
 #define ADC_PIN 3
 unsigned long lastAdcReadMs = 0;
 
+// Sensor streaming (SSE)
+WiFiClient sensorClient;
+bool sensorStreamActive = false;
+
 // Movement constants
 int frameDelay = 100;
 int walkCycles = 10;
@@ -64,6 +68,7 @@ void recordInput();
 void scheduleServoDetach(uint8_t channel);
 void scheduleAllServoDetach();
 void checkServoDetach();
+void handleSensors();
 
 void handleRoot() {
   server.send(200, "text/html", index_html);
@@ -111,6 +116,18 @@ void handleCommandWeb() {
   else {
     server.send(400, "text/plain", "Bad Args");
   }
+}
+
+void handleSensors() {
+  sensorClient = server.client();
+  sensorClient.println("HTTP/1.1 200 OK");
+  sensorClient.println("Content-Type: text/event-stream");
+  sensorClient.println("Cache-Control: no-cache");
+  sensorClient.println("Connection: keep-alive");
+  sensorClient.println("Access-Control-Allow-Origin: *");
+  sensorClient.println();
+  sensorStreamActive = true;
+  Serial.println(F("Sensor stream connected"));
 }
 
 void handleGetSettings() {
@@ -247,6 +264,7 @@ void setup() {
   // Web Server Routes
   server.on("/", handleRoot);
   server.on("/cmd", handleCommandWeb);
+  server.on("/sensors", handleSensors);
   server.on("/getSettings", handleGetSettings);
   server.on("/setSettings", handleSetSettings);
 
@@ -292,6 +310,19 @@ void loop() {
     float voltage = adcValue * 3.3 / 8191.0;
     float distCm = (voltage > 0.1) ? (60.0 / voltage) : 0;
     Serial.print(F("DIST: ")); Serial.print(distCm, 1); Serial.println(F("cm"));
+
+    // Push to SSE stream if connected
+    if (sensorStreamActive) {
+      if (sensorClient.connected()) {
+        sensorClient.print("data: DIST: ");
+        sensorClient.print(distCm, 1);
+        sensorClient.println("cm");
+        sensorClient.println();
+      } else {
+        sensorStreamActive = false;
+        Serial.println(F("Sensor stream disconnected"));
+      }
+    }
   }
 
   // Movement commands only
