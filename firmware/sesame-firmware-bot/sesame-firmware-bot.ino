@@ -140,11 +140,20 @@ void handleControl() {
   }
 
   // Convert direction + angle to servo angle (90 = neutral)
+  // fwd/back: left side fwd=90+angle, right side fwd=90-angle (mirrored)
+  // up/down:  both sides same: up=90+angle, down=90-angle
+  bool isRight = (leg == "right_front" || leg == "right_back");
   int servoAngle;
-  if (direction == "fwd" || direction == "up") {
-    servoAngle = 90 + angle;
-  } else if (direction == "back" || direction == "down") {
-    servoAngle = 90 - angle;
+  if (direction == "fwd") {
+    servoAngle = isRight ? (90 - angle) : (90 + angle);
+  } else if (direction == "back") {
+    servoAngle = isRight ? (90 + angle) : (90 - angle);
+  } else if (direction == "up") {
+    bool upPositive = (leg == "left_front" || leg == "right_back");
+    servoAngle = upPositive ? (90 + angle) : (90 - angle);
+  } else if (direction == "down") {
+    bool upPositive = (leg == "left_front" || leg == "right_back");
+    servoAngle = upPositive ? (90 - angle) : (90 + angle);
   } else {
     server.send(400, "application/json", "{\"error\":\"Invalid direction (fwd/back/up/down)\"}");
     return;
