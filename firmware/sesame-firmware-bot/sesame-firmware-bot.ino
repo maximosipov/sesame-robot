@@ -23,7 +23,6 @@ const byte DNS_PORT = 53;
 WebServer server(80);
 
 // Global state
-String currentCommand = "";
 
 // Network Mode
 bool networkConnected = false;
@@ -51,15 +50,12 @@ unsigned long lastAdcReadMs = 0;
 WiFiClient sensorClient;
 bool sensorStreamActive = false;
 
-// Movement constants
-int frameDelay = 100;
-int walkCycles = 10;
+// Servo timing
 int motorCurrentDelay = 20;
 
 // Prototypes
 void setServoAngle(uint8_t channel, int angle);
 void serviceDelay(unsigned long ms);
-bool pressingCheck(String cmd, int ms);
 void handleGetSettings();
 void handleSetSettings();
 void handleGetStatus();
@@ -75,17 +71,7 @@ void handleRoot() {
 }
 
 void handleCommandWeb() {
-  if (server.hasArg("go")) {
-    currentCommand = server.arg("go");
-    recordInput();
-    server.send(200, "text/plain", "OK");
-  }
-  else if (server.hasArg("stop")) {
-    currentCommand = "";
-    recordInput();
-    server.send(200, "text/plain", "OK");
-  }
-  else if (server.hasArg("servoBtn") && server.hasArg("angle")) {
+  if (server.hasArg("servoBtn") && server.hasArg("angle")) {
     String servoName = server.arg("servoBtn");
     int angle = server.arg("angle").toInt();
     int idx = servoNameToIndex(servoName);
@@ -132,23 +118,18 @@ void handleSensors() {
 
 void handleGetSettings() {
   String json = "{";
-  json += "\"frameDelay\":" + String(frameDelay) + ",";
-  json += "\"walkCycles\":" + String(walkCycles) + ",";
   json += "\"motorCurrentDelay\":" + String(motorCurrentDelay);
   json += "}";
   server.send(200, "application/json", json);
 }
 
 void handleSetSettings() {
-  if (server.hasArg("frameDelay")) frameDelay = server.arg("frameDelay").toInt();
-  if (server.hasArg("walkCycles")) walkCycles = server.arg("walkCycles").toInt();
   if (server.hasArg("motorCurrentDelay")) motorCurrentDelay = server.arg("motorCurrentDelay").toInt();
   server.send(200, "text/plain", "OK");
 }
 
 void handleGetStatus() {
   String json = "{";
-  json += "\"currentCommand\":\"" + currentCommand + "\",";
   json += "\"networkConnected\":" + String(networkConnected ? "true" : "false") + ",";
   json += "\"apIP\":\"" + WiFi.softAPIP().toString() + "\"";
   if (networkConnected) {
@@ -194,15 +175,20 @@ void handleApiCommand() {
   Serial.print("Parsed command: ");
   Serial.println(command);
 
-  if (command == "stop") {
-    currentCommand = "";
-    recordInput();
-    server.send(200, "application/json", "{\"status\":\"ok\",\"message\":\"Command stopped\"}");
-  } else {
-    currentCommand = command;
-    recordInput();
-    server.send(200, "application/json", "{\"status\":\"ok\",\"message\":\"Command executed\"}");
+  // Parse servo commands (e.g. "L1-90")
+  int dashIdx = command.indexOf('-');
+  if (dashIdx > 0) {
+    String servoName = command.substring(0, dashIdx);
+    int angle = command.substring(dashIdx + 1).toInt();
+    int idx = servoNameToIndex(servoName);
+    if (idx != -1 && angle >= 0 && angle <= 180) {
+      runServoToAngle(idx, angle);
+      recordInput();
+      server.send(200, "application/json", "{\"status\":\"ok\",\"message\":\"Servo command executed\"}");
+      return;
+    }
   }
+  server.send(400, "application/json", "{\"error\":\"Unknown command\"}");
 }
 
 void setup() {
@@ -303,7 +289,7 @@ void setup() {
   for (int i = 0; i < 8; i++) {
     setServoAngle(startupOrder[i], 90);
     Serial.print(ServoNames[startupOrder[i]]); Serial.println(F("-90"));
-    delay(1000);
+    delay(500);
   }
   scheduleAllServoDetach();
   Serial.println(F("Startup sequence complete."));
@@ -320,30 +306,19 @@ void loop() {
     int adcValue = adc1_get_raw(ADC1_CHANNEL_2);
     float voltage = adcValue * 3.3 / 8191.0;
     float distCm = (voltage > 0.1) ? (60.0 / voltage) : 0;
-    Serial.print(F("DIST: ")); Serial.print(distCm, 1); Serial.println(F("cm"));
+    Serial.print(F("{ \"distance\": ")); Serial.print(distCm, 1); Serial.println(F(" }"));
 
     // Push to SSE stream if connected
     if (sensorStreamActive) {
       if (sensorClient.connected()) {
-        sensorClient.print("data: DIST: ");
+        sensorClient.print("{ \"distance\": ");
         sensorClient.print(distCm, 1);
-        sensorClient.println("cm");
-        sensorClient.println();
+        sensorClient.println(" }");
       } else {
         sensorStreamActive = false;
         Serial.println(F("Sensor stream disconnected"));
       }
     }
-  }
-
-  // Movement commands only
-  if (currentCommand != "") {
-    String cmd = currentCommand;
-    if (cmd == "forward") runWalkPose();
-    else if (cmd == "backward") runWalkBackward();
-    else if (cmd == "left") runTurnLeft();
-    else if (cmd == "right") runTurnRight();
-    else if (cmd == "stand") { runStandPose(); if (currentCommand == "stand") currentCommand = ""; }
   }
 
   // Serial CLI
@@ -356,12 +331,7 @@ void loop() {
         command_buffer[buffer_pos] = '\0';
         int motorNum, angle;
         recordInput();
-        if(strcmp(command_buffer, "run walk") == 0 || strcmp(command_buffer, "rn wf") == 0) { currentCommand = "forward"; runWalkPose(); currentCommand = ""; }
-        else if(strcmp(command_buffer, "rn wb") == 0) { currentCommand = "backward"; runWalkBackward(); currentCommand = ""; }
-        else if(strcmp(command_buffer, "rn tl") == 0) { currentCommand = "left"; runTurnLeft(); currentCommand = ""; }
-        else if(strcmp(command_buffer, "rn tr") == 0) { currentCommand = "right"; runTurnRight(); currentCommand = ""; }
-        else if(strcmp(command_buffer, "run stand") == 0 || strcmp(command_buffer, "rn st") == 0) runStandPose();
-        else if (strcmp(command_buffer, "subtrim") == 0 || strcmp(command_buffer, "st") == 0) {
+        if (strcmp(command_buffer, "subtrim") == 0 || strcmp(command_buffer, "st") == 0) {
           Serial.println("Subtrim values:");
           for (int i = 0; i < 8; i++) {
             Serial.print("Motor "); Serial.print(i); Serial.print(": ");
@@ -480,19 +450,6 @@ void serviceDelay(unsigned long ms) {
   }
 }
 
-bool pressingCheck(String cmd, int ms) {
-  unsigned long start = millis();
-  while (millis() - start < ms) {
-    server.handleClient();
-    dnsServer.processNextRequest();
-    if (currentCommand != cmd) {
-      runStandPose();
-      return false;
-    }
-    yield();
-  }
-  return true;
-}
 
 void recordInput() {
   // Placeholder for input tracking (no display to update)

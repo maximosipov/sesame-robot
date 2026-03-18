@@ -28,25 +28,15 @@ inline int servoNameToIndex(String servo) {
 }
 
 // External globals and helpers
-extern int frameDelay;
-extern int walkCycles;
-extern String currentCommand;
-
 extern void setServoAngle(uint8_t channel, int angle);
 extern void scheduleServoDetach(uint8_t channel);
 extern void scheduleAllServoDetach();
-extern void serviceDelay(unsigned long ms);
-extern bool pressingCheck(String cmd, int ms);
 
 // Prototypes
 void runStandPose();
 void runServoToAngle(uint8_t servoIdx, int angle);
-void runWalkPose();
-void runWalkBackward();
-void runTurnLeft();
-void runTurnRight();
 
-// ====== STAND (used as neutral position for walk start/end) ======
+// ====== STAND ======
 inline void runStandPose() {
   Serial.println(F("STAND"));
   setServoAngle(R1, 135);
@@ -67,100 +57,4 @@ inline void runServoToAngle(uint8_t servoIdx, int angle) {
     scheduleServoDetach(servoIdx);
     Serial.print(ServoNames[servoIdx]); Serial.print(F("-")); Serial.println(angle);
   }
-}
-
-// --- MOVEMENT ---
-inline void runWalkPose() {
-  Serial.println(F("WALK FWD"));
-  // Initial Step
-  setServoAngle(R3, 135); setServoAngle(L3, 45);
-  setServoAngle(R2, 100); setServoAngle(L1, 25);
-  if (!pressingCheck("forward", frameDelay)) return;
-
-  for (int i = 0; i < walkCycles; i++) {
-    setServoAngle(R3, 135); setServoAngle(L3, 0);
-    if (!pressingCheck("forward", frameDelay)) return;
-    setServoAngle(L4, 135); setServoAngle(L2, 90);
-    setServoAngle(R4, 0); setServoAngle(R1, 180);
-    if (!pressingCheck("forward", frameDelay)) return;
-    setServoAngle(R2, 45); setServoAngle(L1, 90);
-    if (!pressingCheck("forward", frameDelay)) return;
-    setServoAngle(R4, 45); setServoAngle(L4, 180);
-    if (!pressingCheck("forward", frameDelay)) return;
-    setServoAngle(R3, 180); setServoAngle(L3, 45);
-    setServoAngle(R2, 90); setServoAngle(L1, 0);
-    if (!pressingCheck("forward", frameDelay)) return;
-    setServoAngle(L2, 135); setServoAngle(R1, 90);
-    if (!pressingCheck("forward", frameDelay)) return;
-  }
-  runStandPose();
-}
-
-inline void runWalkBackward() {
-  Serial.println(F("WALK BACK"));
-  if (!pressingCheck("backward", frameDelay)) return;
-
-  for (int i = 0; i < walkCycles; i++) {
-    setServoAngle(R3, 135); setServoAngle(L3, 0);
-    if (!pressingCheck("backward", frameDelay)) return;
-    setServoAngle(L4, 135); setServoAngle(L2, 135);
-    setServoAngle(R4, 0); setServoAngle(R1, 90);
-    if (!pressingCheck("backward", frameDelay)) return;
-    setServoAngle(R2, 90); setServoAngle(L1, 0);
-    if (!pressingCheck("backward", frameDelay)) return;
-    setServoAngle(R4, 45); setServoAngle(L4, 180);
-    if (!pressingCheck("backward", frameDelay)) return;
-    setServoAngle(R3, 180); setServoAngle(L3, 45);
-    setServoAngle(R2, 45); setServoAngle(L1, 90);
-    if (!pressingCheck("backward", frameDelay)) return;
-    setServoAngle(L2, 90); setServoAngle(R1, 180);
-    if (!pressingCheck("backward", frameDelay)) return;
-  }
-  runStandPose();
-}
-
-inline void runTurnLeft() {
-  Serial.println(F("TURN LEFT"));
-  for (int i = 0; i < walkCycles; i++) {
-    setServoAngle(R3, 135); setServoAngle(L4, 135);
-    if (!pressingCheck("left", frameDelay)) return;
-    setServoAngle(R1, 180); setServoAngle(L2, 180);
-    if (!pressingCheck("left", frameDelay)) return;
-    setServoAngle(R3, 180); setServoAngle(L4, 180);
-    if (!pressingCheck("left", frameDelay)) return;
-    setServoAngle(R1, 135); setServoAngle(L2, 135);
-    if (!pressingCheck("left", frameDelay)) return;
-    setServoAngle(R4, 45); setServoAngle(L3, 45);
-    if (!pressingCheck("left", frameDelay)) return;
-    setServoAngle(R2, 90); setServoAngle(L1, 90);
-    if (!pressingCheck("left", frameDelay)) return;
-    setServoAngle(R4, 0); setServoAngle(L3, 0);
-    if (!pressingCheck("left", frameDelay)) return;
-    setServoAngle(R2, 45); setServoAngle(L1, 45);
-    if (!pressingCheck("left", frameDelay)) return;
-  }
-  runStandPose();
-}
-
-inline void runTurnRight() {
-  Serial.println(F("TURN RIGHT"));
-  for (int i = 0; i < walkCycles; i++) {
-    setServoAngle(R4, 45); setServoAngle(L3, 45);
-    if (!pressingCheck("right", frameDelay)) return;
-    setServoAngle(R2, 0); setServoAngle(L1, 0);
-    if (!pressingCheck("right", frameDelay)) return;
-    setServoAngle(R4, 0); setServoAngle(L3, 0);
-    if (!pressingCheck("right", frameDelay)) return;
-    setServoAngle(R2, 45); setServoAngle(L1, 45);
-    if (!pressingCheck("right", frameDelay)) return;
-    setServoAngle(R3, 135); setServoAngle(L4, 135);
-    if (!pressingCheck("right", frameDelay)) return;
-    setServoAngle(R1, 90); setServoAngle(L2, 90);
-    if (!pressingCheck("right", frameDelay)) return;
-    setServoAngle(R3, 180); setServoAngle(L4, 180);
-    if (!pressingCheck("right", frameDelay)) return;
-    setServoAngle(R1, 135); setServoAngle(L2, 135);
-    if (!pressingCheck("right", frameDelay)) return;
-  }
-  runStandPose();
 }

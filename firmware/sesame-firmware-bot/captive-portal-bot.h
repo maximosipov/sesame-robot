@@ -104,52 +104,6 @@ const char index_html[] PROGMEM = R"rawliteral(
       transform: translateY(2px);
     }
 
-    /* D-Pad Controls */
-    .dpad-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 15px;
-      width: 100%;
-    }
-    .dpad {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      grid-template-rows: repeat(2, 1fr);
-      gap: 12px;
-      width: 100%;
-      max-width: 294px;
-      aspect-ratio: 3 / 2;
-    }
-    .dpad button {
-      font-size: 35px;
-      border: 2px solid #555;
-      color: #fff;
-      width: 100%;
-      height: 100%;
-      min-height: 70px;
-    }
-    .spacer {
-      visibility: hidden;
-    }
-
-    /* Special Buttons */
-    .btn-stop-all {
-      background: linear-gradient(145deg, #e63946, #c92a35);
-      width: 100%;
-      font-size: 20px;
-      padding: 18px;
-      box-shadow: 0 6px 12px rgba(230, 57, 70, 0.4);
-      border: 2px solid #ff6b6b;
-      color: #fff;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-    }
-    .btn-stop-all:active {
-      background: linear-gradient(145deg, #c92a35, #a8222c);
-      transform: translateY(3px);
-    }
-
     .btn-settings {
       background: linear-gradient(145deg, #555, #444);
       padding: 12px 25px;
@@ -403,25 +357,6 @@ const char index_html[] PROGMEM = R"rawliteral(
 
   <div class="sections-container">
     <div class="section-column">
-      <!-- Movement Control Section -->
-      <div class="section">
-    <div class="section-title">Movement Control</div>
-    <div class="dpad-container">
-      <div class="dpad">
-        <div class="spacer"></div>
-        <button onmousedown="move('forward')" onmouseup="stop()" ontouchstart="move('forward')" ontouchend="stop()">&#9650;</button>
-        <div class="spacer"></div>
-
-        <button onmousedown="move('left')" onmouseup="stop()" ontouchstart="move('left')" ontouchend="stop()">&#9664;</button>
-        <button onmousedown="move('backward')" onmouseup="stop()" ontouchstart="move('backward')" ontouchend="stop()">&#9660;</button>
-        <button onmousedown="move('right')" onmouseup="stop()" ontouchstart="move('right')" ontouchend="stop()">&#9654;</button>
-      </div>
-      <button class="btn-stop-all" onclick="stop()">STOP ALL</button>
-    </div>
-  </div>
-    </div>
-
-    <div class="section-column">
       <!-- Servo Controls Section -->
       <div class="section">
         <div class="section-title">Servo Controls</div>
@@ -478,15 +413,7 @@ const char index_html[] PROGMEM = R"rawliteral(
       <h3>Settings</h3>
 
       <div class="settings-section">
-        <h4>Movement Parameters</h4>
-        <label>Frame Delay (ms):</label>
-        <input type="number" id="frameDelay" min="1" max="1000" step="1">
-        <label>Walk Cycles:</label>
-        <input type="number" id="walkCycles" min="1" max="50" step="1">
-      </div>
-
-      <div class="settings-section">
-        <h4>Motor Settings</h4>
+        <h4>Servo Settings</h4>
         <label>Motor Current Delay (ms):</label>
         <input type="number" id="motorCurrentDelay" min="0" max="500" step="1">
       </div>
@@ -627,18 +554,6 @@ function incrementQueue() {
   }, 1000);
 }
 
-function move(dir) {
-  if (!canSendCommand()) return;
-  incrementQueue();
-  fetch('/cmd?go=' + dir).catch(console.log);
-}
-
-function stop() {
-  commandQueue = 0;
-  updateQueueStatus();
-  fetch('/cmd?stop=1').catch(console.log);
-}
-
 function updateMotor(motorNum, value) {
   document.getElementById('m' + motorNum + 'val').textContent = value + '\u00B0';
   if (!canSendCommand()) return;
@@ -656,8 +571,6 @@ function servoBtn(name) {
 
 function openSettings() {
   fetch('/getSettings').then(r => r.json()).then(data => {
-    document.getElementById('frameDelay').value = data.frameDelay || 100;
-    document.getElementById('walkCycles').value = data.walkCycles || 10;
     document.getElementById('motorCurrentDelay').value = data.motorCurrentDelay || 20;
 
     const savedColor = localStorage.getItem('themeColor') || '#ff8c42';
@@ -681,8 +594,6 @@ function openSettings() {
 
     document.getElementById('settingsPanel').style.display = 'block';
   }).catch(() => {
-    document.getElementById('frameDelay').value = 100;
-    document.getElementById('walkCycles').value = 10;
     document.getElementById('motorCurrentDelay').value = 20;
 
     const savedColor = localStorage.getItem('themeColor') || '#ff8c42';
@@ -719,8 +630,6 @@ function closeMotorControl() {
 }
 
 function saveSettings() {
-  const fd = document.getElementById('frameDelay').value;
-  const wc = document.getElementById('walkCycles').value;
   const mcd = document.getElementById('motorCurrentDelay').value;
 
   const colorSelect = document.getElementById('themeColor');
@@ -729,7 +638,7 @@ function saveSettings() {
   localStorage.setItem('themeColor', themeColor);
   applyTheme(themeColor);
 
-  fetch(`/setSettings?frameDelay=${fd}&walkCycles=${wc}&motorCurrentDelay=${mcd}`)
+  fetch(`/setSettings?motorCurrentDelay=${mcd}`)
     .then(() => closeSettings())
     .catch(() => closeSettings());
 }
@@ -741,16 +650,9 @@ let lastAxisDir = { x: 0, y: 0 };
 const axisThreshold = 0.5;
 const pollIntervalMs = 80;
 
-const buttonBindings = {
-  8: () => stop(),          // Back / Share
-  12: () => move('forward'),// D-pad up
-  13: () => move('backward'),// D-pad down
-  14: () => move('left'),   // D-pad left
-  15: () => move('right'),  // D-pad right
-  16: () => stop(),         // Home / PS
-};
+const buttonBindings = {};
 
-const buttonReleaseStop = new Set([12, 13, 14, 15]);
+const buttonReleaseStop = new Set([]);
 
 function updateGamepadStatus(connected) {
   const status = document.getElementById('gamepadStatus');
@@ -782,11 +684,7 @@ function getAxisDirection(x, y) {
 }
 
 function applyAxisDirection(dir) {
-  if (dir.x === 1) move('right');
-  else if (dir.x === -1) move('left');
-  else if (dir.y === 1) move('backward');
-  else if (dir.y === -1) move('forward');
-  else stop();
+  // No movement commands - axis input ignored
 }
 
 function pollGamepad() {
