@@ -64,6 +64,7 @@ void recordInput();
 void scheduleServoDetach(uint8_t channel);
 void scheduleAllServoDetach();
 void checkServoDetach();
+void handleControl();
 void handleSensors();
 
 void handleRoot() {
@@ -102,6 +103,57 @@ void handleCommandWeb() {
   else {
     server.send(400, "text/plain", "Bad Args");
   }
+}
+
+void handleControl() {
+  if (!server.hasArg("leg") || !server.hasArg("direction") || !server.hasArg("angle")) {
+    server.send(400, "application/json", "{\"error\":\"Missing leg, direction, or angle\"}");
+    return;
+  }
+
+  String leg = server.arg("leg");
+  String direction = server.arg("direction");
+  int angle = server.arg("angle").toInt();
+
+  if (angle < 0 || angle > 90) {
+    server.send(400, "application/json", "{\"error\":\"Angle must be 0-90\"}");
+    return;
+  }
+
+  // Map leg + direction to servo index
+  // fwd/back servos: L1=left_front, L2=left_back, R1=right_front, R2=right_back
+  // up/down servos:  L3=left_front, L4=left_back, R3=right_front, R4=right_back
+  int servoIdx = -1;
+  if (leg == "left_front") {
+    servoIdx = (direction == "fwd" || direction == "back") ? L1 : L3;
+  } else if (leg == "left_back") {
+    servoIdx = (direction == "fwd" || direction == "back") ? L2 : L4;
+  } else if (leg == "right_front") {
+    servoIdx = (direction == "fwd" || direction == "back") ? R1 : R3;
+  } else if (leg == "right_back") {
+    servoIdx = (direction == "fwd" || direction == "back") ? R2 : R4;
+  }
+
+  if (servoIdx == -1) {
+    server.send(400, "application/json", "{\"error\":\"Invalid leg\"}");
+    return;
+  }
+
+  // Convert direction + angle to servo angle (90 = neutral)
+  int servoAngle;
+  if (direction == "fwd" || direction == "up") {
+    servoAngle = 90 + angle;
+  } else if (direction == "back" || direction == "down") {
+    servoAngle = 90 - angle;
+  } else {
+    server.send(400, "application/json", "{\"error\":\"Invalid direction (fwd/back/up/down)\"}");
+    return;
+  }
+
+  runServoToAngle(servoIdx, servoAngle);
+  Serial.print(F("CTRL: ")); Serial.print(leg); Serial.print(F(" "));
+  Serial.print(direction); Serial.print(F(" ")); Serial.println(angle);
+  server.send(200, "application/json", "{\"status\":\"ok\"}");
 }
 
 void handleSensors() {
@@ -250,6 +302,7 @@ void setup() {
   // Web Server Routes
   server.on("/", handleRoot);
   server.on("/cmd", handleCommandWeb);
+  server.on("/control", handleControl);
   server.on("/sensors", handleSensors);
   server.on("/getSettings", handleGetSettings);
   server.on("/setSettings", handleSetSettings);
