@@ -145,9 +145,9 @@ void handleControl() {
   bool isRight = (leg == "right_front" || leg == "right_back");
   int servoAngle;
   if (direction == "fwd") {
-    servoAngle = isRight ? (90 - angle) : (90 + angle);
-  } else if (direction == "back") {
     servoAngle = isRight ? (90 + angle) : (90 - angle);
+  } else if (direction == "back") {
+    servoAngle = isRight ? (90 - angle) : (90 + angle);
   } else if (direction == "up") {
     bool upPositive = (leg == "left_front" || leg == "right_back");
     servoAngle = upPositive ? (90 + angle) : (90 - angle);
