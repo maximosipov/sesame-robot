@@ -296,6 +296,17 @@ void setup() {
   gpio_pulldown_dis((gpio_num_t)ADC_PIN);
 
   Serial.println(F("HTTP server & Captive Portal started. (Bot mode - no face/poses)"));
+
+  // Startup sequence: set all servos to 90 degrees (0 offset) one at a time
+  // Order: L1, R1, L2, R2, L3, R3, L4, R4
+  const uint8_t startupOrder[] = {L1, R1, L2, R2, L3, R3, L4, R4};
+  for (int i = 0; i < 8; i++) {
+    setServoAngle(startupOrder[i], 90);
+    Serial.print(ServoNames[startupOrder[i]]); Serial.println(F("-90"));
+    delay(1000);
+  }
+  scheduleAllServoDetach();
+  Serial.println(F("Startup sequence complete."));
 }
 
 void loop() {
