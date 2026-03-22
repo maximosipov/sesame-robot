@@ -1,10 +1,10 @@
 # Sesame Robot
 
-Quadruped robot with ESP32-S2 (Lolin S2 Mini), 8 MG90 servos, and SHARP distance sensor.
+Quadruped robot with ESP32-S2 (Lolin S2 Mini), 8 SG90 servos (two per leg), and SHARP 2Y0A02 distance sensor.
 
 ## Project Structure
 
-- `firmware/sesame-firmware-bot/` — Active bot firmware (no face/animations)
+- `firmware/sesame-firmware-bot/` — Active bot firmware (no face/animations, SHARP sensor added)
 - `firmware/sesame-firmware-main/` — Full-featured firmware with OLED face
 - `firmware/debugging-firmware/` — Motor testing utilities
 - `hardware/printing/scad/` — OpenSCAD parametric source files

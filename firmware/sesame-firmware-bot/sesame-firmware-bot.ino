@@ -305,8 +305,11 @@ void setup() {
     Serial.println("Error setting up mDNS responder!");
   }
 
-  // Start DNS Server for Captive Portal
-  dnsServer.start(DNS_PORT, "*", myIP);
+  // Start DNS Server for Captive Portal (only in AP-only mode to avoid
+  // interfering with normal DNS resolution on the external network)
+  if (!networkConnected) {
+    dnsServer.start(DNS_PORT, "*", myIP);
+  }
 
   // Web Server Routes
   server.on("/", handleRoot);
@@ -358,7 +361,9 @@ void setup() {
 }
 
 void loop() {
-  dnsServer.processNextRequest();
+  if (!networkConnected) {
+    dnsServer.processNextRequest();
+  }
   server.handleClient();
   checkServoDetach();
 
@@ -368,7 +373,6 @@ void loop() {
     int adcValue = adc1_get_raw(ADC1_CHANNEL_2);
     float voltage = adcValue * 3.3 / 8191.0;
     float distCm = (voltage > 0.1) ? (60.0 / voltage) : 0;
-    Serial.print(F("{ \"distance\": ")); Serial.print(distCm, 1); Serial.println(F(" }"));
 
     // Push to SSE stream if connected
     if (sensorStreamActive) {
