@@ -2,6 +2,8 @@
 #include <WebServer.h>
 #include <DNSServer.h>
 #include <ESPmDNS.h>
+#include "mdns.h"
+#include "esp_netif.h"
 #include <ESP32Servo.h>
 #include "driver/adc.h"
 #include "movement-bot.h"
@@ -274,6 +276,7 @@ void setup() {
     if (WiFi.status() == WL_CONNECTED) {
       networkConnected = true;
       networkIP = WiFi.localIP();
+      WiFi.enableIPv6();
       Serial.println();
       Serial.print("Connected to network! IP: ");
       Serial.println(networkIP);
@@ -289,6 +292,7 @@ void setup() {
 
   // --- ACCESS POINT CONFIGURATION ---
   WiFi.softAP(AP_SSID, AP_PASS);
+  WiFi.softAPenableIPv6();
   IPAddress myIP = WiFi.softAPIP();
 
   Serial.print("AP Created. IP: ");
@@ -301,6 +305,20 @@ void setup() {
     Serial.print(deviceHostname);
     Serial.println(".local");
     MDNS.addService("http", "tcp", 80);
+
+    // Enable IPv6 mDNS responses. Without this, clients (macOS/iOS) query for
+    // both A and AAAA records but only get an A response. The AAAA query times
+    // out after ~5 seconds before falling back to IPv4, causing huge latency.
+    esp_netif_t *sta_netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+    if (sta_netif) {
+      mdns_netif_action(sta_netif, MDNS_EVENT_ENABLE_IP6);
+      mdns_netif_action(sta_netif, MDNS_EVENT_ANNOUNCE_IP6);
+    }
+    esp_netif_t *ap_netif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
+    if (ap_netif) {
+      mdns_netif_action(ap_netif, MDNS_EVENT_ENABLE_IP6);
+      mdns_netif_action(ap_netif, MDNS_EVENT_ANNOUNCE_IP6);
+    }
   } else {
     Serial.println("Error setting up mDNS responder!");
   }
